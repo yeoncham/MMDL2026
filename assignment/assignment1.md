@@ -1,9 +1,9 @@
 # MMMU-val Baseline Evaluation Report — Qwen3-VL-4B-Instruct
 
-- **팀명**: 청강생입니다
+- **팀명**: 열혈청강생
 - **팀원**: 김종민
 - **작성일**: 2026-09-25
-- **재현 커맨드**: `(예: bash scripts/run_mmmu_eval.sh)`
+- **재현 커맨드**: `python run_mmmu_eval.py --model_path Qwen/Qwen3-VL-4B-Instruct --model_revision ebb281ec70b05090aa6165b016eac8ec08e71b17 --data_root MMMU/MMMU --data_revision 98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68 --output_dir ./outputs`
 
 ---
 
@@ -16,8 +16,8 @@
 | 사용 GPU | Google Colab 무료 티어 GPU (T4) |
 | 실측 peak VRAM | 미측정 (세션 단절 및 재개로 인한 전역 프로파일링 누락) |
 | 총 소요 시간 | 900문제 처리를 여러 Colab 세션에 걸쳐 resume 방식으로 진행함 (무료 GPU 한도 소진으로 세션이 중간에 끊겨 재개를 반복함). 마지막 재개 구간(426→900, 474문제) 실측 125.0분. 전체 세션 합산 시간은 정확히 기록되지 않음 — **한계로 8절에 기술** |
-| 의존성 | `transformers`, `accelerate`, `qwen-vl-utils[decord]`, `datasets`, `huggingface_hub`, `pandas`. |
-| 실행 커맨드 | ```bash\npython run_mmmu_eval.py \\\n  --model_path Qwen/Qwen3-VL-4B-Instruct \\\n  --model_revision ebb281ec70b05090aa6165b016eac8ec08e71b17 \\\n  --data_root MMMU/MMMU \\\n  --data_revision 98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68 \\\n  --output_dir ./outputs\n``` _(현재는 Colab 노트북 셀 단위 실행이므로, 제출 전 위와 같이 argparse 기반 스크립트로 변환 권장 — 8절 한계 참고)_ |
+| 의존성 | `transformers`, `accelerate`, `qwen-vl-utils[decord]`, `datasets`, `huggingface_hub`, `pandas`. 정확한 버전은 `requirements.txt` 참고 |
+| 실행 커맨드 | ```bash\npython run_mmmu_eval.py \\\n  --model_path Qwen/Qwen3-VL-4B-Instruct \\\n  --model_revision ebb281ec70b05090aa6165b016eac8ec08e71b17 \\\n  --data_root MMMU/MMMU \\\n  --data_revision 98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68 \\\n  --output_dir ./outputs\n``` `run_mmmu_eval.py`(본 레포 포함)로 실행. Colab에서 검증한 파이프라인을 argparse 기반 스크립트로 이식함 |
 
 ## 2. 프롬프트
 
@@ -64,7 +64,7 @@ Answer the question directly with a short, precise answer (a number, word, or sh
 | 이미지 해상도 처리 | `min_pixels = 256 × 28 × 28 = 200,704`, `max_pixels = 1024 × 28 × 28 = 802,816` |
 
 **선택 근거**:
-- `max_new_tokens`: 초기 `32`로 설정했을 때 Accounting 30문제 파일럿에서 정답률 13.33%, 그중 다수가 응답 절단으로 인한 파싱 실패(letter 미출력)로 확인됨. `256`으로 상향 후 동일 표본 재실험 결과 정답률 53.33%로 개선, 응답 절단 0건 확인. 계산 과정이 긴 회계/재무 문제 특성을 고려해 여유를 두고 `256`으로 채택.
+- `max_new_tokens`: 초기 `32`로 설정했을 때 Accounting 30문제 파일럿에서 정답률 13.33%, 그중 다수가 응답 절단으로 인한 파싱 실패(letter 미출력)로 확인됨. `256`으로 상향 후 동일 표본 재실험 결과 정답률 53.33%로 개선, 응답 절단 0건 확인. 계산 과정이 긴 회계/재무 문제 특성을 고려해 여유를 두고 `256`으로 채택. 다만 이 개선은 프롬프트 강화와 동시에 적용되어, 토큰 증가분만의 독립적인 기여도는 별도로 검증하지 못함 — multiple-choice 응답은 대부분 단일 letter로 종료되어 더 작은 토큰 수로도 충분했을 가능성이 있으나, open-ended 응답 길이 및 `do_sample=True`로 인한 응답 분산에 대한 안전마진으로 256을 유지함.
 - 이미지 해상도(`max_pixels`): Colab 무료 GPU(VRAM 14.56 GiB) 환경에서 원본 해상도 그대로 처리 시 특정 고해상도 이미지 문제에서 단일 attention 연산이 27.4 GiB를 요구하며 OOM 발생. 이를 방지하기 위해 `max_pixels`를 제한함. **다만 이 값과 공식 수치(67.4) 사이 정확도 손실의 정량적 관계는 별도로 검증하지 않았으며, 잠재적 trade-off로만 기록함** (7절 참고).
 
 ## 4. 채점(파싱) 방식
@@ -128,14 +128,13 @@ Answer the question directly with a short, precise answer (a number, word, or sh
 
 ## 7. 격차 분석
 
-_(1000자 이내로 작성 필요 — 아래는 초안이며 팀 상황에 맞게 다듬어서 채워넣으세요)_
-
 > 초기 파이프라인(`max_new_tokens=32`, 지시가 약한 프롬프트)에서는 Accounting 표본 정확도가 13.33%에 불과했고, 오답 대부분이 모델이 풀이 과정을 서술하다 응답이 절단되어 정답 letter가 아예 출력되지 않은 경우였다. 프롬프트를 "설명 없이 정답만"으로 강화하고 `max_new_tokens`를 256으로 상향한 결과 동일 표본 정확도가 53.33%로 개선되었으며, 응답 절단 사례는 0건으로 감소했다. 또한 open-ended 문제(전체 53/900) 채점을 exact-match에서 허용오차 기반 근사 비교로 개선해 정답 수가 6→15개로 증가했다. 이 두 개선을 반영한 최종 결과가 macro avg 53.00으로, 여전히 공식 수치(67.4) 대비 14.4점 낮다. 잔여 격차는 (1) 비-greedy 샘플링(`temperature=0.7`, 공식 recipe를 그대로 따른 것이나 공식 벤치마크가 동일 디코딩 조건으로 측정됐는지는 불명), (2) OOM 방지를 위한 `max_pixels` 제한으로 인한 이미지 디테일 손실 가능성(별도 ablation 미실시), (3) 900문제 subsample과 공식 평가(전체 validation) 간 조건 차이 등 복수 요인이 원인으로 추정되나, 본 실험에서 개별 검증까지는 수행하지 못했다.
 
 ## 8. 기타 특이사항 / 한계 (Optional)
 
 - Colab 무료 GPU 한도 소진으로 세션이 여러 차례 끊겨, 파일 기반 resume(이미 처리된 문제 id를 건너뛰는 방식)으로 재개함. 그 과정에서 로컬(`/content/`) 저장 파일이 세션 종료로 유실된 적이 있어, 이후 Google Drive 마운트로 저장 경로를 변경함.
-- 실행 환경(패키지 버전, GPU 모델명, peak VRAM)을 정확히 기록하지 못해 완전한 재현성 확보에는 추가 보완이 필요함.
+- 실행 환경(GPU 모델명 상세 스펙, peak VRAM)을 정확히 기록하지 못해 완전한 재현성 확보에는 추가 보완이 필요함.
 - 프롬프트 구성 시 이미지 여러 장을 텍스트 앞에 일괄 배치했으며, 원본 질문에 포함된 `<image 1>`, `<image 2>` 등 텍스트 내 위치 지정을 반영하지 않음 — 이미지가 2장 이상인 문제에서 정확도에 영향을 줄 수 있는 단순화.
 - `max_pixels` 값이 성능에 미치는 영향은 별도 ablation 실험으로 검증하지 못함. 시간이 더 있었다면 동일 표본에 대해 `max_pixels`를 상향한 재실험으로 원인을 좁혀볼 계획이었음.
 - 채점 시 사용한 숫자 근사 비교 로직(허용오차 절대 0.01 / 상대 2%)은 자체 기준이며, MMMU 공식 평가 하네스와 완전히 동일하지 않을 수 있음.
+- Colab 노트북에서 검증한 파이프라인을 `run_mmmu_eval.py`(argparse 기반)로 이식함. 노트북과 스크립트 간 로직은 동일하나, 스크립트 버전으로 전체 900문제를 처음부터 재실행하여 결과를 재검증하지는 않음.
