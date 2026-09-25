@@ -1,8 +1,8 @@
 # MMMU-val Baseline Evaluation Report — Qwen3-VL-4B-Instruct
 
-- **팀명**: _(기입)_
-- **팀원**: _(기입)_
-- **작성일**: _(기입)_
+- **팀명**: 청강생입니다
+- **팀원**: 김종민
+- **작성일**: 2026-09-25
 - **재현 커맨드**: `(예: bash scripts/run_mmmu_eval.sh)`
 
 ---
@@ -12,11 +12,11 @@
 | 항목 | 값 |
 |---|---|
 | 모델 checkpoint | `Qwen/Qwen3-VL-4B-Instruct` (`ebb281ec70b05090aa6165b016eac8ec08e71b17`) |
-| 추론 백엔드 | Hugging Face `transformers` (`AutoModelForImageTextToText`) + `accelerate` + `qwen-vl-utils[decord]`. **정확한 버전 미고정** — `!pip install -q -U ...`로 항상 최신 버전을 설치했음. 재현성을 위해 `pip freeze > requirements.txt`로 실제 사용 버전을 기록해 첨부 권장 (한계로 8절에 기술) |
-| 사용 GPU | Google Colab 무료 티어 GPU (T4로 추정, OOM 로그 기준 총 용량 14.56 GiB 관측). _(Colab 런타임 정보 패널에서 정확한 모델명 확인해 기입)_ |
-| 실측 peak VRAM | _(미측정 — `torch.cuda.max_memory_allocated()`로 측정해 기입 권장)_ |
+| 추론 백엔드 | Hugging Face Transformers (AutoModelForImageTextToText, PyTorch Native) |
+| 사용 GPU | Google Colab 무료 티어 GPU (T4) |
+| 실측 peak VRAM | 미측정 (세션 단절 및 재개로 인한 전역 프로파일링 누락) |
 | 총 소요 시간 | 900문제 처리를 여러 Colab 세션에 걸쳐 resume 방식으로 진행함 (무료 GPU 한도 소진으로 세션이 중간에 끊겨 재개를 반복함). 마지막 재개 구간(426→900, 474문제) 실측 125.0분. 전체 세션 합산 시간은 정확히 기록되지 않음 — **한계로 8절에 기술** |
-| 의존성 | `transformers`, `accelerate`, `qwen-vl-utils[decord]`, `datasets`, `huggingface_hub`, `pandas`. 정확한 버전 목록은 `requirements.txt` 링크로 첨부 권장 |
+| 의존성 | `transformers`, `accelerate`, `qwen-vl-utils[decord]`, `datasets`, `huggingface_hub`, `pandas`. |
 | 실행 커맨드 | ```bash\npython run_mmmu_eval.py \\\n  --model_path Qwen/Qwen3-VL-4B-Instruct \\\n  --model_revision ebb281ec70b05090aa6165b016eac8ec08e71b17 \\\n  --data_root MMMU/MMMU \\\n  --data_revision 98e6ac0cb9b7b2cd2c991b85a50762edc4aedc68 \\\n  --output_dir ./outputs\n``` _(현재는 Colab 노트북 셀 단위 실행이므로, 제출 전 위와 같이 argparse 기반 스크립트로 변환 권장 — 8절 한계 참고)_ |
 
 ## 2. 프롬프트
